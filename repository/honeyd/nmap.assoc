@@ -1,0 +1,138 @@
+#FORMAT: <nmap entry>;<xprobe entry>
+#Digital UNIX OSF1 V 4.0-4.0F:
+FreeBSD 2.2.1 - 4.1;FreeBSD 2.2.8
+#FreeBSD 2.2.1-STABLE;
+FreeBSD 3.2-4.0;FreeBSD 3.2
+FreeBSD 4.0-20000208-CURRENT;FreeBSD 4.0
+FreeBSD 4.1.1 - 4.3 (X86);FreeBSD 4.1.1
+FreeBSD 4.3 - 4.4-RELEASE;FreeBSD 4.3
+#FreeBSD 4.3 - 4.4PRERELEASE;
+FreeBSD 4.4 for i386 (IA-32);FreeBSD 4.4
+FreeBSD 4.4-5 or Mac OS X 10.0.4 (Darwin V. 1.3-1.3.7 or 4P13);FreeBSD 4.5
+FreeBSD 4.4-STABLE Thu Jan 31 19:43:54 GMT 2002;FreeBSD 4.4
+FreeBSD 4.5-RELEASE (or -STABLE) (X86);FreeBSD 4.5
+FreeBSD 4.6;FreeBSD 4.6
+FreeBSD 4.6-RC on Alpha;FreeBSD 4.6
+FreeBSD 4.6-RELEASE or -STABLE (July 2002) (X86);FreeBSD 4.6
+#FreeBSD 5.0-CURRENT Sun Apr 14 12:41:40 EDT 2002;
+HP-UX 11.00;HPUX B.11.0 x
+HP-UX B11.00 U 9000/839;HPUX B.11.0 x
+#Linux 1.0.9;
+#Linux 1.2.13;
+#Linux 1.2.8 - 1.2.13;
+#Linux 1.3.20 (X86);
+#Linux 2.0.0;
+#Linux 2.0.27 - 2.0.30;
+#Linux 2.0.32-34;
+#Linux 2.0.32-34;
+#Linux 2.0.34-38;
+#Linux 2.0.35 (S.u.S.E. Linux 5.3 (i386);
+#Linux 2.1.19 - 2.2.20;
+#Linux 2.1.24 PowerPC;
+#Linux 2.1.76;
+#Linux 2.1.91 - 2.1.103;
+Linux 2.2.12 - 2.2.19;Linux Kernel 2.2.x
+Linux 2.2.14;Linux Kernel 2.2.x
+Linux 2.2.19 - 2.2.20;Linux Kernel 2.2.x
+Linux 2.2.19 on a DEC Alpha;Linux Kernel 2.2.x
+Linux 2.2.5 - 2.2.13 SMP;Linux Kernel 2.2.x
+#Linux 2.3.12;
+#Linux 2.3.28-33;
+#Linux 2.3.47 - 2.3.99-pre2 x86;
+#Linux 2.3.49 x86;
+Linux 2.4.16 - 2.4.18;Linux Kernel 2.4.5 and above
+Linux 2.4.17 on HP 9000 s700;Linux Kernel 2.4.5 and above
+Linux 2.4.19-pre4 on Alpha;Linux Kernel 2.4.5 and above
+Linux 2.4.7 (X86);Linux Kernel 2.4.5 and above
+Linux 2.5.25 or Gentoo 1.2 Linux 2.4.19 rc1-rc7);Linux Kernel 2.4.5 and above
+#Linux Kernel 2.1.88;
+Linux Kernel 2.4.0 - 2.5.20;Linux Kernel 2.4.5 and above
+Linux Kernel 2.4.0 - 2.5.20 w/o tcp_timestamps;Linux Kernel 2.4.5 and above
+Linux Kernel 2.4.0-test5;Linux Kernel 2.4.0 - 2.4.4
+Linux Kernel 2.4.3 SMP (RedHat);Linux Kernel 2.4.0 - 2.4.4
+Linux kernel 2.2.13;Linux Kernel 2.2.x
+MS Windows2000 Professional RC1/W2K Advance Server Beta3;Microsoft Windows 2000/2000SP1/2000SP2/2000SP3
+#Mac OS 7.0-7.1 With MacTCP 1.1.1 - 2.0.6;
+#Mac OS 8 running on an LC 475;
+#Mac OS 8.0;
+#Mac OS 8.1;
+#Mac OS 8.1;
+#Mac OS 8.1;
+#Mac OS 8.1 running on a PowerPC G3 (iMac);
+#Mac OS 8.6;
+#Mac OS 8.6;
+#Mac OS 8.6;
+#Mac OS 9 - 9.1;
+Mac OS 9.2.2;Mac OS 9.2.x
+#Mac OS X 1.1-1.2 (Rhapsody 5.5-5.6) on a G3;
+#Mac OS X 10.1 - 10.1.4;
+#Mac OS X 10.1.4 (Darwin Kernel 5.4) on iMac;
+Mac OS X 10.1.5;Mac OS X 10.1.5
+#Mac OS X Server 1.2 (ppc);
+Microsoft NT 4.0 SP5-SP6;Microsoft Windows NT 4 Service Pack 4 and Above
+#Microsoft Windows 95 4.00.950 B (IE 5 5.00 2314.1003);
+#Microsoft Windows.NET Enterprise Server (build 3604-3615 beta);
+#NetBSD 1.0 big endian arch;:
+#NetBSD 1.0 i386;
+#NetBSD 1.0 little endian arch;
+#NetBSD 1.1 - 1.2.1 litle endian arch;
+#NetBSD 1.2 - 1.2.1 big endian arch;
+#NetBSD 1.3 - 1.3.3 big endian arch;
+#NetBSD 1.3 - 1.3.3 little endian arch;
+#NetBSD 1.3H (after 19980919) or 1.3I (before 19990119) little endian arch;
+#NetBSD 1.3H-1.5  big endian arch;
+#NetBSD 1.3I (after 19990119) to 1.4 x86;
+NetBSD 1.5.2 running on a Commodore Amiga (68040 processor);NetBSD 1.5.2
+NetBSD 1.5_ALPHA i386;NetBSD 1.5.0
+#NetBSD 1.6 BETA 4 i386 (20020630 snapshot);
+#OpenBSD 2.1 - 2.3/SPARC;
+#OpenBSD 2.1/X86;
+#OpenBSD 2.2 - 2.3;
+OpenBSD 2.6 with all available patches as of roughly Feb01;OpenBSD 2.6
+OpenBSD 2.6-2.8;OpenBSD 2.7
+OpenBSD 2.7/SPARC or NFR IDS Appliance ( 12/10/00 );OpenBSD 2.7
+OpenBSD 2.8 (X86);OpenBSD 2.8
+OpenBSD 2.9-beta through release (X86);OpenBSD 2.9
+OpenBSD 2.9-stable;OpenBSD 2.9
+OpenBSD 3.0 (x86 or SPARC);OpenBSD 3.0
+OpenBSD 3.0 SPARC with pf "scrub in all" feature;OpenBSD 3.0
+OpenBSD 3.1 (X86);OpenBSD 3.1
+OpenBSD 3.1 on an Alpha;OpenBSD 3.1
+#OpenBSD Post 2.4 (November 1998) - 2.5;
+#SCO Open Desktop 2.0;
+#SCO OpenServer 5.0.5;
+SCO OpenServer(TM) Release 5;SCO OpenServer Release 5
+#SCO Release 5;
+#SCO UNIX release 3.2;
+#SCO UnixWare 7.0.0 or OpenServer 5.0.4-5.0.6;
+#SCO UnixWare 7.1.0 x86;
+#Solaris 2.4 w/most Sun patches (jumbo cluster patch, security patches, etc);
+Solaris 2.5, 2.5.1;Sun Solaris 5 (SunOS 2.5)
+Solaris 2.6 - 7 (SPARC);Sun Solaris 6 (SunOS 2.6)
+Solaris 2.6 - 7 X86;Sun Solaris 6 (SunOS 2.6)
+Solaris 2.6;Sun Solaris 6 (SunOS 2.6)
+Solaris 2.6 - 2.7 with tcp_strong_iss=0;Sun Solaris 6 (SunOS 2.6)
+Solaris 2.6 - 2.7 with tcp_strong_iss=2;Sun Solaris 6 (SunOS 2.6)
+Solaris 8 early access beta through actual release;Sun Solaris 8 (SunOS 2.8)
+Solaris 9 Beta through Release on SPARC;Sun Solaris 9 (SunOS 2.9)
+Solaris 9 with TCP_STRONG_ISS set to 2;Sun Solaris 9 (SunOS 2.9)
+Win 98 SE with security patch A;Microsoft Windows 98/98SE
+Win XP Pro or Windows 2000 Pro SP2+;Microsoft Windows XP Professional
+Windows 2000 Professional;Microsoft Windows 2000/2000SP1/2000SP2/2000SP3
+Windows 2000 SP2;Microsoft Windows 2000/2000SP1/2000SP2/2000SP3
+Windows 2000 server SP2;Microsoft Windows 2000/2000SP1/2000SP2/2000SP3
+Windows 2000/XP/ME;Microsoft Windows 2000/2000SP1/2000SP2/2000SP3
+#Windows 3.1 with Trumpet Winsock 2.0 revision B;
+Windows 98;Microsoft Windows 98/98SE
+Windows 98 w/ Service Pack 1;Microsoft Windows 98/98SE
+Windows 98SE + IE5.5sp1;Microsoft Windows 98/98SE
+Windows Millennium Edition (Me), Win 2000, or WinXP;Microsoft Windows ME
+Windows NT 4 SP3;Microsoft Windows NT 4 Service Pack 3 and Below
+Windows NT 4.0 SP 6a + hotfixes;Microsoft Windows NT 4 Service Pack 4 and Above
+Windows NT 4.0 Server SP5-SP6;Microsoft Windows NT 4 Service Pack 4 and Above
+#Windows NT 5 Beta2 or Beta3;
+Windows NT4 / Win95 / Win98;Microsoft Windows NT 4 Service Pack 4 and Above
+Windows NT4 or 95/98/98SE;Microsoft Windows NT 4 Service Pack 4 and Above
+#Windows XP Home Edition;
+Windows XP Professional RC1+ through final release;Microsoft Windows XP Professional
+#Windows for Workgroups 3.11 / TCP/IP-32 3.11b stack or Win98;
