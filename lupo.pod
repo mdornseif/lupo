@@ -1,0 +1,387 @@
+=head1 Lupo Paketdesign und Serverinfrastruktur
+
+B<Lupo> ist ein Software Update System daß nach KISS (Keep it Simple
+and Stupid) Grundsätzen designed wurde. B<Lupo> kennt keine
+Abhängigkeiten zwischen verschiedenen Paketen. Lupo versucht wo
+immer möglich, offene Standarts und Protokolle einzusetzen und
+gleichzeitig möglichst unabhängig von auf dem Zeilsystem
+installierten Komponenten zu sein.
+
+Ob B<Lupo> ein Akronym ist und wenn ja, wofür es steht, mag der
+geneigte Leser selber entscheiden. 
+
+
+=head2 Lupo Pakete
+
+B<Lupo> Pakete sind tar(1) Archive, welche mit bzip2(1)
+kompremiert werden. Der Inhalt dieses Archives folgt einer fest
+definierten Struktur und besteht aus 5 Dateien und vier
+Verzeichnissen.
+
+=over
+
+=item * F<VERSION>
+
+Diese Datei gibt die B<Lupo> Version an, mit der das Paket
+erstellt wurde. Lupo Tools müssen sich weigern mit Paketen zu
+arbeiten, die größer als ihre eigene ist. Die Version wird als
+ASCII-Dezimal Repräsentation einer Integer Zahl gespeichert. Wenn
+die Datei F<VERSION> mehr als eine Zeile enthält, wird nur die
+erste Zeile interpretiert. Die erste Zeile darf nur eine Zahl
+enthalten. 
+
+=item * F<FROMLEVEL>
+
+Diese Datei enthält die Version (den Patchlevel), auf die das
+Paket angewendet wird. Das System, auf der das B<Lupo> Paket
+installiert werden soll, muß genau dieser Version entsprechen,
+ansonsten wird die Installation abgebrochen. Der Patchlevel ist
+genauso, wie die Version codiert.
+
+=item * F<TOLEVEL>
+
+Diese Datei enthält die Version oder den Patchlevel den das
+System nach der Installation des Updates hat. Dies muß
+I<fromlevel>+1 sein.
+
+=item * F<NEWS>
+
+Diese Datei enthält eine Auflistung der Neuerungen, die das Paket
+bringt und die dem Interessierten Nutzer während des Updates
+angezeigt wird. Wenn die Datei 0 Bytes groß ist, wird dem User
+nichts angezeigt.
+
+=item * F<CHANGES>
+
+Diese Datei wird dem User I<nicht> angezeigt. Sie sollte alle
+Änderungen, die das Paket bewirkt, beinhalten und dient der
+internen Kontrolle. Sie wird nicht dauerhaft auf dem Zielsystem
+abgelegt.
+
+=item * F<ROOT>
+
+In diesem Verzeichnis liegen die eigentlichen Dateien, die auf
+das Zielsystem gespielt werden sollen, wobei ihre lage unterhalb
+des F<ROOT> Verzeichnisses die entgültige Position im Dateisystem
+bestimmt. Die Datei F<ROOT/user/bin/httpd> wird beispielsweise
+nach F</usr/bin/httpd> installiert.
+
+=item * F<STAGGING>
+
+In desem Verzeichnis werden Dateien Transportiert, die nicht
+entgültig auf dem Zielsystem verbleiben sollen. Gleichzeitig ist
+es das I<temporary> Verzeichnis für die
+Insatllationsskripte. Hier können beispielsweise Datenbankdumps
+abgespeichert werden, die in die Datenbank auf dem Zielsystem
+eingefügt werden sollen.Nach erfolgter Paketinstallation werden
+alle Inhalte des Verzeichnisses gelöscht.
+
+=item * F<PREINSTALL> und F<POSTINSTALL>
+
+Diese Verzeichnisse beinhalten Skripte, die vor bzw. nach der
+Installation der Dateien aus F<ROOT> ins reguläre Dateisystem
+ausgeführt werden. Bei der Ausführung der Skripte ist F<STAGGING>
+das current directory. Sie Skripte brauchen sich nicht um ide
+Beseitigung von ihnen dort abgelegter Dateien kümmern. 
+
+=back
+
+
+=head2 Lupo Serverinfrastruktur
+
+Um B<LIC> Updates halbautomatisch oder automatisch durchführen zu
+können muß ein http(s) Update Server mit einer definierten Struktur
+bestehen. Beispielhaft soll hier der Servername
+"update.lic.de:8080" verwendet werden.
+
+Alle Pakete haben Namen nach dem Schema F<lic-I<FF>-I<TT>.lupo>
+wobei I<FF> der Ausgangsversion (fromversion) und I<TT> der
+Zielversion (toversion) entsprechen. Die Versionsstrings müssen
+numerisch und dürfen zwischen 1-8 Zeichen lang sein.
+
+Die einzelnen Pakete sind unter der URL
+F<https://update.lic.de:8443/lupo/l/lic-FF-TT.lupo> abzurufen.
+
+Unter F<http://update.lic.de:8080/lupo/latest> ist eine Datei
+abzurufen, in der die neuse erhältliche Version abzurufen ist.
+Der Aufbau dieser Datei entspricht der Datei F<VERSION>.
+
+Diese Datei wird von Clients relativ häufig abgerufen. Es kann
+signifikant Traffic eingespart werden, wenn ein Server verwendet
+wird, der wenige HTTP-Header erzeugt bzw. wenn mit einem CGI-asis/nph
+Skript gearbeitet wird.
+
+Während der Check, ob eine neue Version bereitliegt, per http
+erfolgt, um das Protokoll einfach zu halten, erfolgt der Download
+der *.lupo Files per http-over-TLS (https) um sicherzustellen,
+daß die installierte Software auch autentisch ist.  Dafür muß der
+Client eine Kopie des Zertifikats, mit dem der Serverkey signiert
+wurde vorhalten.
+
+Um Man-in-the-Middle Attacks auszuschließen, muß das Zertifikat
+des Servers bzw. ein Fingerprint davon in die Lupo Clients
+eingebaut werden. Das bedeutet in der Folge daß, falls der
+Server-Key abhanden kommt. Lupo nicht mehr funktioniert.
+I<Der Key muß also hinreichend gegen Verlust gesichert sein.>
+
+
+=head1 Lude -  die Client Seite von Lupo
+
+=head2 der eigentliche Updatevorgang.
+
+=over
+
+=item 1
+
+I<http://update.lic.de:8080/lupo/latest> wird
+abgefragt. Aus dem Vergleich der dort angegebenen Version mit der
+Systemversion wird ermittelt, wieviele Update Schritte notwendig
+sind.
+
+Die nächsten Schritte werden für jeden Versionsschrit
+vorgenommen, der notwendig ist, um das System auf die aktuelle
+Version zu updaten. 
+
+=item 2
+
+Das entsprechende Paket wird per https nach F</tmp>
+heruntergeladen. Hierbei wird das Zertifikat des sendenden
+Servers geprüft. Nach erfolgreichem Download wird das Paket nach
+F</var/lupo/downloads> verschoben. So wird sichergestellt, daß in
+/var/lupo/downloads nur komplette Archive vorliegen. Dies
+geschieht für alle erforderlichen Pakete.
+
+=item 3
+
+Falls in F</var/lupo/downloads> Pakete existieren, wird
+das Paket mit der kleinsten Versionsnummer nach F</var/lupo/pkg>
+entpackt, soweit sich dort keine Files befinden. Nach dem
+Entpacken werden Versionsnummer usw. geprüft.
+
+=item 4
+
+Es wird ins Verzeichnis F</var/lupo/pkg/STAGGING>
+gewechselt.
+
+=item 5
+
+Jedes Shellskript in F</var/lupo/pkg/PREINSTALL> wird
+ausgeführt. Direkt nach der Ausführung wird es gelöscht und ein
+sync(2) ausgeführt. So kann die Gefahr, daß ein Skript nach einem
+crash zweimal ausgeführt wird, minimiert werden. Wenn ein Skript
+einen Reboot durchführen möchte, kann es dies gefahrlos tun, wenn
+es sich erst selber löscht und dann den Reboot auslößt.
+
+	rm ../PREINSTALL/$0
+	reboot
+
+Die Ausführungsreihenfolge ergibt sich aus einer ASCII Sortierung
+der Dateinamen. D.h.
+
+	01-FIrstscript
+	10-Scripta
+	1Skript1
+	Anotherskript
+	
+Ich schlage vor alle Skripte ZZ-Skriptzweck zu nennen. ZZ sind
+zwei Ziffern.
+
+=item 6
+
+Die Dateien aus F</var/lupo/pkg/ROOT/I<irgendwas>/datei>
+werden nach /I<irgendwas>/datei verschoben. Dabei wird zunächst
+eine eventuell am Zielort vorhandene Datei mit dem gleichen Namen
+von F<dateiname> zu F<dateiname-> verschoben. Dann wird die neue
+Datei aus dem Paket an ihren Zielort verschoben und dann wird
+F<dateiname-> gelöscht, soweit entstanden.
+
+=item 7
+
+Die Shellskripts in F</var/lupo/pkg/POSTINSTALL>
+werden nach der gleichen Methode wie die in PREINSTALL
+ausgeführt.
+
+=item 8
+
+Die Datei F</var/lupo/pkg/TOVERSION> wird nach
+F</var/lupo/version> verschoben.
+
+=item 9
+
+evtl. Zurück zu Punkt 2.
+
+=item 10
+
+B<Luft> wird aufgerufen.
+
+=item 11
+
+B<Lude> startet sich selbst erneut, um evtl. neu
+hinzugekommene Pakete nachzuinstallieren.
+
+=back
+
+
+=head2 Luft - Ferststellung, ob Updates vorliegen.
+
+B<Luft> stellt fest, ob ein Update vorliegt.
+
+=over
+
+=item 1
+
+Zunächst wird überprüft, ob die Datei
+F</var/lupo/latest> älter als 24 Stunden ist. Wenn ja, wird
+diese durch ersetzt. F<http://update.lic.de:8080/lupo/latest>
+
+=item 2
+
+wenn die Version in F</var/lupo/latest> größer als die
+in F</var/lupo/version> ist, wird F</var/lupo/updateneeded>
+angelegt, ansonsten gelöscht.
+
+=back
+
+Die GUI kann also die Datei F</var/lupo/updateneeded> auf
+Existenz prüfen und, wenn diese existiert anzeigen, daß ein
+Update verfügbar ist.
+
+
+=head1 Die installation des Servers.
+
+Zunächst ist sicherzustellen, daß die erforderlichen Tools
+installiert sind: B<curl> mit SSL/TLS Support, B<bzip2>, B<tar>
+und B<mv> sowie für den Server B<OpenSSL> und für das
+Beispielsetup B<stunnel> und B<webfs>.
+
+Danach ist das Paket auszupacken und im Skript
+F<install-server> die IP-Adresse für den Server anzupassen.
+
+Nun ist F<install-server> auszuführen, es legt in F</var/lupod/>
+seine gesammten Dateien ab, erstellt ein Skript zum starten des
+Webserversver und erstellt drei Beispielpakete.
+
+In F</var/lupod/lic/> ligt nun ein Paket, daß zur installation
+auf dem LIC dient. F<install-client> muß angepaßt werden und kann
+dann auf dem Zielsystem aufgerufen werden. Es installiert dann
+die entsprechenden Programme unter /var/lupo.
+
+
+=head1 Einbindung in das LIC
+
+Folgendes muß zur Integration in das B<LIC> geschehen:
+
+=over
+
+=item * Feststellung ob Updates vorliegen.
+
+Das Programm F</var/lupo/bin/luft> sollte regelmäßig aufgerufen
+werden. Ich schlage vor es, auf einem Standleitungs B<LIC>
+stündlich und auf einem Wählleitungs B<LIC> bei jeder Einwahl
+aufzurufen. Luft achtet selbsständig darauf, daß es Updateserver
+nicht überlastet, indem es höchstens alle 24 h einen Check
+durchführt.
+
+
+=item * Anzeige der Updatemöglichkeit in der GUI
+
+Wenn die Datei F</var/lupo/updateneedet> vorhanden ist, sollte
+dem Benutzer angezeigt werden, daß ein Update möglich ist. Die
+GUI kann in F</var/lupo/version> die eigene Version und in
+F</var/lupo/latest> die N-euste Version, die auf dem Server liegt
+abfragen.
+
+=item * Durchführung eines Updates
+
+Damit ein Update durchgeführt wird, muß F</var/lupo/bin/lude>
+ausgeführt werden. Dieses Programm detacht sich vom Webserver und
+führt das Update durch. Dabei kann in F</var/lupo/status>
+abgrefragt werden, was B<Lude> momentan macht. Diese Datei wird
+atomisch geupdatet und sollte jederzeit lesbar sein. Unter
+F</var/lupo/log> ist ein Log der letzten Aktionen zu sehen. Auch
+diese Datei wird atomisch geupdated. Beide Dateien werden, sobald
+B<Lude> beendet ist, gelöscht. Ich empfehle, daß die GUI eine
+Seite mit automatischem Reload zur Verfügung stellt, die
+F<status> oder F<log> einbindet um den User über den Fortgang des
+Updates auf dem Laufenden zu halten.  Solange F<var/lupo/status>
+existiert, sollte es nicht möglich sein, B<Lude> erneut
+aufzurufen.  Lude achtet selbständig darauf, daß es nicht
+mehrfach gestartet wird.
+
+=item * lude Aufruf beim systemstart
+
+Beim Systemstart muß B<Lude> aufgerufen werden, damit es ein
+eventuell abgebrochenes Update zuende ausführen kann.  Dazu muß
+F</var/lupo/bin/lude> mit dem Parameter C<--boot> aufgerufen
+werden.
+
+An diesem Punkt kann B<Lude> nicht sicherstellen, daß es nicht
+mehrfach ausgeführt wird. Dies sollte aber kein Problem sein,
+solange die Boot-Skripten des Systems nicht durcheinander
+geraten.
+
+=back
+
+=head1 Paketerstellung für Eilige
+
+Bitte möglichst zuerst die Einführung in L<"Lupo Pakete"> durchlesen.
+
+Man legt sich zunächst für das neue Lupo Projekt ein neues
+Projetverzeichnis an, daß man z.B. F<statistik-tool-update nennt>.
+
+ /var/lupod/bin/lupo-pkg-new statistik-tool-update
+
+In diesem Verzeichnis kann man dann im Unterverzeichnis F<ROOT>
+alle Dateien angeben, die auf dem LIC landen sollen. Wenn eine
+datei bei der Installation in F</etc> landen soll, muß sie im
+Paketverzeichnis F<ROOT/etc> liegen.
+
+In die Verzeichnisse F<PREINSTALL> und F<POSTINSTALL> kann man
+Shellscripte legen, die zu Beginn oder Zum Ende der Installation
+ausgeführt werden. Diese Skriptre werden im Verzeichnis
+F<STAGGING> ausgeführt; dort können auch Dateien, die nur für die
+Installation gebraucht werden, abgelegt werden.
+
+In die Datei F<NEWS> sollte eine Endkundenkompatible Beschreibung
+des Paketinhalts in F<CHANGES> eine detaillierte Beschreibung
+dessen, was das Paket macht.
+
+Nun gilt es zu Prüfen, ob das Paket korrekt ist.
+
+ /var/lupod/bin/lupo-pkg-check statistik-tool-update
+
+Wenn dies ohne Fehlermeldungen Geschieht, kann man das Paket
+erstellen.
+
+ /var/lupod/bin/lupo-pkg-build statistik-tool-update
+
+Man bekommt den Paketnamen mitgeteilt und kann nun das Paket
+publizieren.
+
+ /var/lupod/bin/lupo-pkg-publish lic-5-6.lupo
+
+Das war's.
+
+
+=head1 Bugs
+
+=over
+
+
+=item * regression tests
+
+Es sollte eine automatische Test-Suite geben, die lude und due
+lupo-pkg-* Tools selbständig auf Konformität mit der
+Spezifikation prüft.
+
+=item * Prüfen ob die Prüfung des Ca-Zertifikates erfolgt
+
+Wenn das Zertifikat nicht in Ordnung ist, ist das Verhalten
+undefiniert. Das System sollte eine ein definiertes Verhalten bei
+Problemen mit dem Zertifikat an den Tag legen.
+
+*item * Paketerstellung
+
+Lupo sollte durch System-Snapshots in der Lage sein
+halbautomatisch neue Pakete zu erstellen.
+

@@ -1,0 +1,31 @@
+#!/bin/sh
+# $Id: lupo-pkg-new,v 1.1 2001/02/26 23:48:50 drt Exp $
+# Time-stamp: <01/02/02 16:23:23 drt>
+
+# This file creates a new Lupo Project Directory
+
+# Urheber D.R. Tzeck im Auftrag der Twisd AG, Bonn http://www.twist.de/
+# Alle Verbreitungs- und Nutzungsrechte vorbehalten.
+
+# lupo-pkg-new PROJECTNAME
+
+
+if test "xx$1" = 'xx'; then
+     echo "Usage: $0 PAKETNAME"
+     exit
+fi
+
+mkdir $1
+cd $1
+  
+cat /var/lupod/server/lupo/latest > FROMLEVEL
+echo "`cat /var/lupod/server/lupo/latest`+1" | bc > TOLEVEL
+echo "1" > VERSION
+touch NEWS
+touch CHANGES
+mkdir ROOT
+mkdir PREINSTALL
+mkdir POSTINSTALL
+mkdir STAGGING
+
+

@@ -1,0 +1,19 @@
+Time-stamp: <01/02/25 23:41:57 drt>
+
+Changes from beta2 to rc1
+
+* /var/lupo/status wird schon beim Programmstart erzeugt
+* PID-Files werden beim Beenden beseitigt
+
+Changes from beta1 to beta2:
+
+* Dokumentation erweitert, insb. Clientinstallation und
+  Paketerstellungsguide
+* lupo-pkg-publish führt eine Reihe Tests durch
+* lupo-pkg-build gibt den Paketnamen aus
+* lude hantiert mit Lockfiles und stellt sicher, daß es
+  nicht mehrfach aufgerufen wird.
+* SIGINT, SIGTERM und SIGHUP werden abgefangen und führen zum Programmende.
+* Funktionalität für Resume nach Reboot/Crash integriert.
+* Alle Aufrufe von system() wurden durch msystem()
+  ersetzt. msystem() führt umfangreiche Fehlerprüfungen durch.

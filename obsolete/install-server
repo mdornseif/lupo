@@ -1,0 +1,119 @@
+#!/bin/sh
+
+# Time-stamp: <01/01/31 16:39:31 drt>
+# sets up an example server and creates an example certificate
+
+# Urheber D.R. Tzeck im Auftrag der Twisd AG, Bonn http://www.twist.de/
+# Alle Verbreitungs- und Nutzungsrechte vorbehalten.
+
+# this example server needs
+# * webfs
+# * stunnel
+
+IP=62.159.58.131
+
+mkdir /var/lupod
+mkdir /var/lupod/server
+mkdir /var/lupod/lic
+
+# zunächst wird ein Server key und ein Zertifikat erstellt
+/usr/local/ssl/bin/openssl req -new -x509 -days 3000 -nodes -out /var/lupod/lupo-cert.pem -keyout /var/lupod/lupo-key.pem
+cat /var/lupod/lupo-cert.pem >> /var/lupod/lupo-key.pem
+
+cat > /var/lupod/lupod-start <<EOF
+webfsd -p 80 -i 62.159.58.131 -r /var/lupod/server/
+/usr/local/sbin/stunnel -d https -r $IP:http -p /var/lupod/lupo-key.pem
+EOF
+
+mkdir /var/lupod/server/lupo
+mkdir /var/lupod/server/lupo/l
+echo 1 > /var/lupod/server/lupo/latest
+
+# install binarys
+mkdir /var/lupod/bin
+install -b -m 755 lupo-pkg-new /var/lupod/bin/
+install -b -m 755 lupo-pkg-check /var/lupod/bin/
+install -b -m 755 lupo-pkg-build /var/lupod/bin/
+install -b -m 755 lupo-pkg-publish /var/lupod/bin/
+
+# stuff for the client
+cp luft /var/lupod/lic/
+cp lude /var/lupod/lic/
+cp install-client /var/lupod/lic
+
+# build example packages
+cd /var/lupod
+/var/lupod/bin/lupo-pkg-new example-1
+cd example-1
+mkdir ROOT/usr
+mkdir ROOT/usr/local
+mkdir ROOT/usr/local/bin
+mkdir ROOT/tmp
+mkdir ROOT/tmp/lude
+mkdir ROOT/tmp/lude/test
+mkdir ROOT/tmp/lude/test/fuer
+mkdir ROOT/tmp/lude/test/fuer/verschachtelung
+sed 's/^X//' << 'SHAR_EOF' > 'ROOT/usr/local/bin/elite' &&
+#!/usr/bin/perl
+use strict;
+my @han = qw(extended precompiled disassembled para agressive paki horny kingsize bloody cVs assembled tele hAx0RiNg scriptkiddy rude Mercyless s0NiC frame wet xtrem main world-wide dumped big little phired phaTT YoYo daMNed cyber pa1n phUzzY Sail0r flashing zer0 ultra micro defendor d3sCent fr3sh N1CK psycho X dj mc d3LaY captain LaZZie instant MadDam Mc Smoke e- Style Evil Ghett0 Doctor MaNGa bambam  Supra Commander w33d konkret pr0f3ss0r C0de magic m0nkey Ultra P0rn Chrome Knight Flame Eternal MiGHtY Crash Burn Leet Da Acid Lord Overlord King Sub Illegal Phreak Phony Cowboy Samurai Ninja);
+push(@han, "Master of"); push(@han, "Prince of"); push(@han, "Friend of"); push(@han, "son of");
+my @dle = qw(knowledge attacks z0r0 Guru pointer zero pRiEsT chillA God websiterz Xploison dUde k33n ultraLARGE d00d00 terror child --force iNterRUpt Login pULZ L0LiTa KiTTie logic vIrUZ afterburner mAlloc m00n r00t EaT3R makeR b0rg Fate 2000 overfl0w L0V3 Phreak Ir0n r0b0t ME$$engeR outcast d3LiGHt heroe Godzilla PacMan Bomberman LightBringA sucker ch3ckA ManTa waster runner burner AntiChrist mushroom r00lah gANGSTA mASTA m0tha mutant Elite Hate Soldier Hax0r Flash Demon Crack Hell girl Satan Dog Wolf Junkie Wizard p0rnK1ng Grrrrl Overburn Killer Pirate Flash Overclock Nightmare Doom Confusion Destruction Cool);
+my @cr = qw(drupp dead stoned connected alied bumm-bumm paran0ia global phive uSCHi brAIn druppie Dope XtC naked illuminated ultraelite leit neo neon post drAg0n rotten brute imperial integrated dark black evil monsta pilla ill skill);
+push(@cr, "House of"); push(@cr, "Sisters of"); push (@cr, "Kingz oF");
+my @ew = qw(Gang boyZ breaKaZ kaoz circuit war y-o-y Maztaz b0x BBS beaters mzs ck3ckAz PhRiEnTZ puzzyzz cR3W clan KLaN m0vement flashaz sackaz smokerz raZ3 chiQuaZ rAg3 house crackaz kultur .com hax0rs rulers robotz Tr00p aRmY forcerz bAllZ nationz lutschaz genesis evangelion kingz controllerz opressors punishers fighters);
+push(@ew, "peer group");
+my @az = qw(xx><xx -=- oOo <-- [- ... :: ~v^v~ .:=:. /* -{ " =<= <crew> <<<  -'\/);
+my @ci = qw(xx><xx -=- oOo --> -] ... :: ~v^v~ .:=:. */ }- " =>= </crew> >>> \/`-);
+my $rnd1 = int(rand($#han))+1; my $rnd2 = int(rand($#dle))+1; my $rnd3 = int(rand($#cr))+1; 
+my $rnd4 = int(rand($#ew))+1; my $rnd5 = int(rand($#az))+1;
+print "Welcome HaX0r!\n";
+print "Your new handle is: [32m$han[$rnd1] [36m[33m$dle[$rnd2] [0m from da [36m$az[$rnd5] $cr[$rnd3] [31m$ew[$rnd4] $ci[$rnd5][0m \n";
+SHAR_EOF
+chmod 755 ROOT/usr/local/bin/elite
+echo "Dieses Update verbessert den Systemlogin" > NEWS
+echo "Es wird ein 'leetes Skript installiert, daß beim Login" > CHANGES
+echo "koole Sprüche macht, weil es in /etc/profile aufgerufen wird." >> CHANGES
+echo "/usr/local/bin/elite" > STAGGING/etc.profile.addition
+echo "#!/bin/sh" > POSTINSTALL/50-updateprofile
+echo "cat etc.profile.addition" >> POSTINSTALL/50-updateprofile
+chmod 755  POSTINSTALL/50-updateprofile
+cd ..
+/var/lupod/bin/lupo-pkg-check example-1
+/var/lupod/bin/lupo-pkg-build example-1
+/var/lupod/bin/lupo-pkg-publish lic-1-2.lupo
+
+/var/lupod/bin/lupo-pkg-new example-2
+cd example-2
+echo "Dieses Update verbessert die Systemstabilität" > NEWS
+echo "Es wird ein nutzloses 'leetes Skript überschrieben" > CHANGES
+mkdir ROOT/usr
+mkdir ROOT/usr/local
+mkdir ROOT/usr/local/bin
+echo "Leere Testdatei" >> ROOT/usr/local/bin/elite
+cd ..
+/var/lupod/bin/lupo-pkg-check example-2
+/var/lupod/bin/lupo-pkg-build example-2
+/var/lupod/bin/lupo-pkg-publish lic-2-3.lupo
+
+/var/lupod/bin/lupo-pkg-new example-3
+cd example-3
+echo "Dieses Update beschleunigt den Systemlogin" > NEWS
+echo "Es wird ein nutzloses 'leetes Skript gelöscht" > CHANGES
+echo "und /etc/profile angepaßt" >> CHANGES
+echo "#!/bin/sh" > POSTINSTALL/40-cleantmp
+echo "rm -Rf /tmp/lude" > POSTINSTALL/40-cleantmp
+chmod 755  POSTINSTALL/40-cleantmp
+echo "#!/bin/sh" > POSTINSTALL/50-updateprofile
+echo "perl -np -i.bak -e 's/^\/usr\/local\/bin\/elite\n//;' /etc/profile" >> POSTINSTALL/50-updateprofile
+chmod 755  POSTINSTALL/50-updateprofile
+echo "#!/bin/sh" > POSTINSTALL/60-killeet
+echo "rm -f /usr/local/bin/elite" > POSTINSTALL/60-killeet
+chmod 755  POSTINSTALL/60-killeet
+cd ..
+/var/lupod/bin/lupo-pkg-check example-3
+/var/lupod/bin/lupo-pkg-build example-3
+/var/lupod/bin/lupo-pkg-publish lic-3-4.lupo
+
+# generate client package
+cp /var/lupod/lupo-cert.pem /var/lupod/lic/

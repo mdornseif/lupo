@@ -1,0 +1,51 @@
+#!/usr/bin/perl 
+# $Id: luft,v 1.1 2001/02/26 23:48:50 drt Exp $
+# Time-stamp: <01/02/12 02:58:37 drt>
+
+# This file creates Lupo Packages from a Lupo Project Directory
+
+# Urheber D.R. Tzeck im Auftrag der Twisd AG, Bonn http://www.twist.de/
+# Alle Verbreitungs- und Nutzungsrechte vorbehalten.
+
+require '/var/lupo/lupo.conf' || die time() . ": luft: fatal: can't require lupo.conf: $!";
+
+# redirect stderr to a file for later error feedback
+# errors while doing this will be ignored
+close STDERR;
+open STDERR, ">>$lupoerr";
+  
+# check if '/var/lupo/latest' existsts and is younger than 24h
+$ctime = (stat($filename))[10];
+if($ctime + 24*60*60 < time())
+  {
+    # check latest version via http
+    $latest_version = `$versionretrive_command`;
+    # we just ignore errors of cURL - what else can we do?
+    
+    # write to file
+    open LATEST, ">$lupodir/latest" || die time() . ": luft: fatal: can't open $lupodir/latest for writing: $!";
+    print LATEST $latest_version;
+    close LATEST;
+  }
+
+# check if update is needed
+open VERSION, "$lupodir/version" || die time() . ": luft: fatal: can't open $lupodir/version for version: $!";
+$our_version = <VERSION>;
+close VERSION;
+
+if ($latest_version > $our_version)
+  {
+    # huhu we could check for errors, but what to do then?
+    `touch $lupodir/updateneeded`;
+  }
+else
+  {
+    # there is no update needed.
+    # we ignore errors.
+    unlink("$lupodir/updateneeded");
+  }
+
+# that was all.
+
+# perhaps it would be a good idea to use luft to send error
+# feedback information back to twisd

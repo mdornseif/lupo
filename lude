@@ -1,0 +1,392 @@
+#!/usr/bin/perl
+# $Id: lude,v 1.1 2001/02/26 23:48:50 drt Exp $
+# Time-stamp: <01/02/25 23:43:13 drt>
+
+# This is the workhorse of LUPO. Lude is called by the webserver,
+# detaches from it's parent, downloads al available update packets
+# and installes them.
+
+# Urheber D.R. Tzeck im Auftrag der Twisd AG, Bonn http://www.twist.de/
+# Alle Verbreitungs- und Nutzungsrechte vorbehalten.
+
+require '/var/lupo/lupo.conf' || die time() . ": lude: fatal: can't require lupo.conf: $!";
+
+use File::Find;
+use File::Copy;
+use POSIX 'setsid';
+$| = 1;         # Autoflush to avoid mess with system()s Output
+$0 = 'lude';
+
+#$DEBUG='yep';
+
+sub END {
+    unlink "$lupodir/lude.pid";
+    unlink "$lupodir/lude.pid.$$";
+    unlink "$lupodir/status";
+    die "lude: error: dieing because of an SIG" . $_[0] . "\n";
+  };
+
+# make GUI happy
+system("touch $lupodir/status");
+
+unless ($DEBUG)
+  {
+    # First we do all kind of jumbo-mumbo to really detach from our
+    # parent. Consult APUE (Stevens) or perlfunc/perlipc (manpage)
+    # for further info what we are doing here.
+
+    $SIG{CHLD} = "IGNORE";
+
+    chdir '/' || die "Can't chdir to /: $!";
+    open STDIN, '/dev/null' || die "Can't read /dev/null: $!";
+    open STDOUT, '>/dev/null' || die "Can't write to /dev/null: $!";
+    defined(my $pid = fork) || die "Can't fork: $!";
+    exit if $pid; # parent may die
+    setsid || die "Can't start a new session: $!";
+    # redirect stderr to a file for later error feedback
+    # errors while doing this will be ignored
+    close STDERR;
+    open STDERR, ">>$lupoerr";
+    # if we didn't use $lupoerr this would be the right thing:
+    # open STDERR, '>&STDOUT' || die "Can't dup stdout: $!";
+  }
+
+
+# first check latest version by calling luft
+msystem("$lupodir/bin/luft");
+
+# signal handlers
+$SIG{HUP} = $SIG{INT} = $SIG{TERM} = END;
+ 
+# check for '--boot' parameter
+if ($ARGV[0] == '--boot')
+  {
+    log_action("Es wird nach einem Reboot fortgesetzt");
+    # clean lockfiles
+    unlink "$lupodir/lude.pid";
+    unlink "$lupodir/lude.pid.$$";
+    unlink "$lupodir/status";
+  }
+
+# creating a lock file the Unix way
+$lockfile = "$lupodir/lude.pid";
+$templock = "$lupodir/lude.pid.$$";
+open(LOCK,">$templock") || die "lude: error: creating templock $templock: $!";
+# we just create a lockfile by hardlinking to our tmp lockfile
+if (!link($templock,$lockfile))
+  {
+    # another lockfile exists - we have to handle this
+    my($nlink,$lockage) = (stat($lockfile))[3,9];
+    $lockage = time() - $lockage;
+    if ($nlink < 2 || $lockage > 2*60*60)
+      {
+	#is older than 2 hours or has no links to itselv - just kill it
+	unlink($lockfile)
+	  || do {
+	    # we can't delete the dammed thing - give up
+	    unlink($templock);
+	    die "lude: error: can't unlink stale $lockfile: $!"
+	  };
+	# create an new link
+	link($templock,$lockfile)
+	  || do {
+	    # this doesn't work out - give up
+	    unlink($templock);
+	    die "lude: error: can't create $lockfile: $!"
+	  }
+      }
+    else
+      {
+	# there is an actual Lockfile - give up
+	unlink $templock;
+	die  "lude: error: another lude seems to be running.\n";
+      }  
+  }
+
+# uff! we are alone.
+
+# check if there is old stuff to be finished
+# we might have a half extracted package here
+
+# check for '--boot' parameter
+if ($ARGV[0] == '--boot')
+  {
+    chdir("$lupodir/pkg")
+      || die time() . ": lude: fatal: can't chdir $lupodir/pkg: $!";
+
+    if (-d './PREINSTALL')
+      {
+	# first finish installation of this package
+	process_package();
+      }
+  }
+
+
+# read result of luft
+open LATEST, "$lupodir/latest"
+  || die time() . ": lude: fatal: can't open $lupodir/latest for writing: $!";
+$latest_version = <LATEST>;
+close LATEST;
+$latest_version =~ s/\n//;
+open VERSION, "$lupodir/version"
+  || die time() . ": lude: fatal: can't open $lupodir/version for version: $!";
+$our_version = <VERSION>;
+close VERSION;
+$our_version =~ s/\n//;
+
+log_action("Es wird von $our_version zu $latest_version geupdated");
+
+# first download all we need
+for ($step = $our_version; $step < $latest_version; $step++)
+  {
+    $to = $step + 1;
+
+    chdir("/tmp")
+      || die time() . ": lude: fatal: can't chdir to /tmp: $!";
+ 
+    # get packet
+    log_action("Lade Paket lic-$step-$to.lupo");
+    msystem("$pkgretrive_command $luporepositoryurl/lic-$step-$to.lupo");
+    # todo: errorchecking of curl, especially httpS problems and certificate
+
+    # move downloaded file to our download directory
+    # we use mv here since rename might not work accross file boundarys
+    move("/tmp/lic-$step-$to.lupo", "$lupodir/downloads/lic-$step-$to.lupo")
+      || die time() . ": lude: fatal: can't move /tmp/lic-$step-$to.lupo to $lupodir/downloads/lic-$step-$to.lupo: $!";
+  }
+
+# We close the loop here. So first all files will be downloaded
+# and then the extraction progress is started.
+
+# for each packet in downloads
+opendir(DIR, "$lupodir/downloads")
+  || die time() . ": lude: fatal: can't opendir $lupodir/downloads: $!";@pkgs = sort( grep { /^lic-.*lupo/ && -f "$lupodir/downloads/$_" } readdir(DIR));
+closedir DIR;
+
+foreach (@pkgs)
+  {
+    chdir("$lupodir/pkg")
+      || die time() . ": lude: fatal: can't chdir $lupodir/pkg: $!";
+
+    log_action("extraiere $_");
+    #####
+    ##### extract packet
+    #####
+    msystem("bzip2 -dc ../downloads/$_ | tar xf -");
+
+    unlink("../downloads/$_")
+      || print STDERR time() . " lude: info: can't unlink ../downloads/$_: $!\n";
+
+    # show features
+    open NEWS, "NEWS"
+      || die time() . ": lude: fatal: can't open NEWS: $!";
+    # read the whole file
+    undef $/; $n = <NEWS>; $/ = '';
+    close NEWS;
+    log_action("Dieses Paket bietet folgende Features:\n\n" . '-' x 30 . "\n" . $n . '-' x 30 . "\n");
+    log_action("treffe Installationsvorbereitungen");
+
+    process_package();
+
+  }
+
+# call LUFT again to give new Information to the GUI
+msystem("$lupodir/bin/luft");
+unlink("$lupodir/log", "$lupodir/status")
+  || print STDERR time() . " lude: info: can't unlink metafiles $!\n";
+
+# that was all
+exit(0);
+
+### Mover
+# moves a file from $File::Find::name its root positon 
+# does this very carefully by first moving /@_[0] to /@_[0]-
+# then @_[0] to /@_[0] and then unlinking /@_[0]-
+#
+# Mover("usr/local/bin/elite"):
+#   mv /usr/local/bin/elite /usr/local/bin/elite-
+#   mv usr/local/bin/elite /usr/local/bin/elite
+#   rm /usr/local/bin/elite-
+#
+# all this bit shifting is done to get rid of problems when
+# overwriting running daemons
+#
+# I would prefer using perl modules for doing this, but then this code
+# would be depending on the Modules beeing correctly installed.
+# So we depend on mv beeing correctly installed ...
+
+sub Mover {
+
+  $source = $destination = $File::Find::name;
+  $destination =~ s/$lupodir\/pkg\/ROOT//;
+  $destination = '/' . $destination;
+  
+  if (-d $source)
+    {    
+      # create directory hierachies if needed
+      unless(-d $destination)
+	{
+	  # we have to create the directory (hierachy)
+	  @d = split(/\//, $destination);
+	  $n = '';
+	  foreach (@d)
+	    {
+	      $n .= '/' . $_;
+	      unless(-d $dn)
+		{
+		  mkdir $n, 755;
+		  chmod $n, oct((stat('$lupodir'.'/pkg/ROOT/'.$n))[2]);
+		}
+	    }
+	}
+    }
+
+  # handle files here
+  if (-f $source)
+    {    
+      if ($DEBUG)
+	{    
+	  print "moving $source to $destination\n";
+	}
+      
+      move($destination, $destination . '-');
+      # errors are ignored
+      
+      # this move still seems to ave its Problems. Perl error?
+      unless(move($source, $destination))
+	{
+	  print STDERR time() . ": lude: error: can't move $source to $destination $!\n";
+	  # try to repair everything
+	  move($destination . "-", $destination);        
+	}
+      else
+	{
+	  unlink($destination . "-")
+	    || print STDERR time() . ": lude: notice: can't unlink $destination-: $!\n";
+	}
+    }
+}
+
+### log_action(action)
+# shows our actions to allow the web frontend to show all kind of nifty Information 
+sub log_action {
+
+  if ($DEBUG)
+    {
+      print $_[0] . "\n";
+    } 
+
+  # show what we are doing if somebody calls 'ps -ax'
+  $0 = 'lude [' . $_[0] . ']'; 
+  
+  # write status to /var/lupo/status using a atomic write-rename operation
+  open STATUS, ">$lupodir/status.tmp"
+    || die time() . ": lude: fatal: can't open $lupodir/status.tmp: $!";
+  print STATUS $_[0] . "\n";
+  close STATUS;
+  sync;
+  rename("$lupodir/status.tmp", "$lupodir/status")
+    || die time() . ": lude: fatal: can't rename $lupodir/status.tmp to $lupodir/status: $!";
+
+  # append status to log the same way
+  undef $/;  # read the whole file at once
+  open LOG, "$lupodir/log"
+    || die time() . ": lude: fatal: can't open $lupodir/log: $!";
+  $l = <LOG>;
+  $/ = '';
+  close LOG;
+  open LN, ">$lupodir/log.tmp"
+    || die time() . ": lude: fatal: can't open $lupodir/log.tmp: $!";
+  print LN $l;
+  print LN $_[0] . "\n";
+  close LN;
+  rename("$lupodir/log.tmp", "$lupodir/log")
+    || die time() . ": lude: fatal: can't rename $lupodir/log.tmp to $lupodir/log.tmp: $!";
+}
+
+### process_package
+# executes pre- and postinstall scripts and moves files to their
+# final destination
+
+sub process_package() { 
+    # our workdir for the scripts is STAGGING
+    chdir("STAGGING")
+      || die time() . ": lude: fatal: can't chdir $lupodir/pkg/STAGGING: $!";
+    
+    # execute preinstall scripts by calling all files in PREINSTALL
+    opendir(DIR, "../PREINSTALL") || die time() . ": lude: fatal: can't opendir ../PREINSTALL: $!";
+    # just files, no dot at the beginning, sorted
+    @scripts = sort(grep { !/^\..?/ && -f "../PREINSTALL/$_" } readdir(DIR));
+    closedir DIR;
+
+    # execute each Skript
+    foreach (@scripts)
+      {
+	log_action($_);
+	msystem("sh -c ../PREINSTALL/$_");
+      }
+    
+    # move files to destination directory
+    find(\&Mover, "$lupodir/pkg/ROOT");
+    
+    # execute postinstall scripts
+    opendir(DIR, "../POSTINSTALL")
+      || die time() . ": lude: fatal: can't opendir ../POSTINSTALL: $!";
+    @scripts = sort(grep { !/^\..?/ && -f "../POSTINSTALL/$_" } readdir(DIR));
+    closedir DIR;
+
+    # execute each Skript
+    foreach (@scripts)
+      {
+	msystem("sh -c ../POSTINSTALL/$_");
+      }
+
+    # notice new version number
+    open VERSION, ">$lupodir/version.tmp"
+      || die time() . ": lude: fatal: can't open $lupodir/version.tmp: $!";
+    print VERSION $to . "\n";
+    close VERSION;
+    sync;
+    rename("$lupodir/version.tmp", "$lupodir/version")
+      || die time() . ": lude: fatal: can't rename $lupodir/version.tmp to $lupodir/version: $!";
+
+    # delete remainings.
+    chdir($lupodir)
+      || die time() . ": lude: fatal: can't chdir $lupodir: $!";
+    
+    msystem("rm -Rf pkg/STAGGING");
+    msystem("rm -Rf pkg/PREINSTALL");
+    msystem("rm -Rf pkg/POSTINSTALL");
+    msystem("rm -Rf pkg/ROOT");
+    msystem("rm -Rf pkg/*");
+  }
+
+### msystem() - system() with error checking
+
+sub msystem {
+  $rc = 0xffff & system @_;
+  if ($DEBUG)
+    {
+      printf "system(%s) returned %#04x: ", @_, $rc;
+    }
+  
+  if($rc == 0xff00)
+    {
+      print "command failed: $!\n";
+    }
+  elsif($rc > 0x80)
+    {
+      $rc >>= 8;
+      print "ran with non-zero exit status $rc\n";
+    }
+  else
+    {
+      print "ran with ";
+      if ($rc &   0x80)
+	{
+	  $rc &= ~0x80;
+	  print "core dump from ";
+	}
+      print "signal $rc\n"
+    }
+}

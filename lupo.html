@@ -1,0 +1,415 @@
+<HTML>
+<HEAD>
+<TITLE>No Title</TITLE>
+<LINK REV="made" HREF="mailto:hackers@FreeBSD.org">
+</HEAD>
+
+<BODY>
+
+<!-- INDEX BEGIN -->
+
+<UL>
+
+	<LI><A HREF="#Lupo_Paketdesign_und_Serverinfra">Lupo Paketdesign und Serverinfrastruktur</A>
+	<UL>
+
+		<LI><A HREF="#Lupo_Pakete">Lupo Pakete</A>
+		<LI><A HREF="#Lupo_Serverinfrastruktur">Lupo Serverinfrastruktur</A>
+	</UL>
+
+	<LI><A HREF="#Lude_die_Client_Seite_von_Lupo">Lude -  die Client Seite von Lupo</A>
+	<UL>
+
+		<LI><A HREF="#der_eigentliche_Updatevorgang_">der eigentliche Updatevorgang.</A>
+		<LI><A HREF="#Luft_Ferststellung_ob_Updates">Luft - Ferststellung, ob Updates vorliegen.</A>
+	</UL>
+
+	<LI><A HREF="#Die_installation_des_Servers_">Die installation des Servers.</A>
+	<LI><A HREF="#Einbindung_in_das_LIC">Einbindung in das LIC</A>
+	<LI><A HREF="#Paketerstellung_f_r_Eilige">Paketerstellung für Eilige</A>
+	<LI><A HREF="#Bugs">Bugs</A>
+</UL>
+<!-- INDEX END -->
+
+<HR>
+<P>
+<H1><A NAME="Lupo_Paketdesign_und_Serverinfra">Lupo Paketdesign und Serverinfrastruktur</A></H1>
+<P>
+<STRONG>Lupo</STRONG> ist ein Software Update System daß nach KISS (Keep it Simple and Stupid)
+Grundsätzen designed wurde. <STRONG>Lupo</STRONG> kennt keine Abhängigkeiten zwischen verschiedenen Paketen. Lupo versucht wo
+immer möglich, offene Standarts und Protokolle einzusetzen und gleichzeitig
+möglichst unabhängig von auf dem Zeilsystem installierten Komponenten zu
+sein.
+
+<P>
+Ob <STRONG>Lupo</STRONG> ein Akronym ist und wenn ja, wofür es steht, mag der geneigte Leser selber
+entscheiden. 
+
+<P>
+<HR>
+<H2><A NAME="Lupo_Pakete">Lupo Pakete</A></H2>
+<P>
+<STRONG>Lupo</STRONG> Pakete sind <CODE>tar(1)</CODE> Archive, welche mit <CODE>bzip2(1)</CODE>
+kompremiert werden. Der Inhalt dieses Archives folgt einer fest definierten
+Struktur und besteht aus 5 Dateien und vier Verzeichnissen.
+
+<UL>
+<LI><STRONG><A NAME="item_VERSION">VERSION</A></STRONG>
+<P>
+Diese Datei gibt die <STRONG>Lupo</STRONG> Version an, mit der das Paket erstellt wurde. Lupo Tools müssen sich
+weigern mit Paketen zu arbeiten, die größer als ihre eigene ist. Die
+Version wird als ASCII-Dezimal Repräsentation einer Integer Zahl
+gespeichert. Wenn die Datei <EM>VERSION</EM> mehr als eine Zeile enthält, wird nur die erste Zeile interpretiert. Die
+erste Zeile darf nur eine Zahl enthalten. 
+
+<LI><STRONG><A NAME="item_FROMLEVEL">FROMLEVEL</A></STRONG>
+<P>
+Diese Datei enthält die Version (den Patchlevel), auf die das Paket
+angewendet wird. Das System, auf der das <STRONG>Lupo</STRONG> Paket installiert werden soll, muß genau dieser Version entsprechen,
+ansonsten wird die Installation abgebrochen. Der Patchlevel ist genauso,
+wie die Version codiert.
+
+<LI><STRONG><A NAME="item_TOLEVEL">TOLEVEL</A></STRONG>
+<P>
+Diese Datei enthält die Version oder den Patchlevel den das System nach der
+Installation des Updates hat. Dies muß
+<EM>fromlevel</EM>+1 sein.
+
+<LI><STRONG><A NAME="item_NEWS">NEWS</A></STRONG>
+<P>
+Diese Datei enthält eine Auflistung der Neuerungen, die das Paket bringt
+und die dem Interessierten Nutzer während des Updates angezeigt wird. Wenn
+die Datei 0 Bytes groß ist, wird dem User nichts angezeigt.
+
+<LI><STRONG><A NAME="item_CHANGES">CHANGES</A></STRONG>
+<P>
+Diese Datei wird dem User <EM>nicht</EM> angezeigt. Sie sollte alle Änderungen, die das Paket bewirkt, beinhalten
+und dient der internen Kontrolle. Sie wird nicht dauerhaft auf dem
+Zielsystem abgelegt.
+
+<LI><STRONG><A NAME="item_ROOT">ROOT</A></STRONG>
+<P>
+In diesem Verzeichnis liegen die eigentlichen Dateien, die auf das
+Zielsystem gespielt werden sollen, wobei ihre lage unterhalb des <EM>ROOT</EM> Verzeichnisses die entgültige Position im Dateisystem bestimmt. Die Datei <EM>ROOT/user/bin/httpd</EM> wird beispielsweise nach <EM>/usr/bin/httpd</EM> installiert.
+
+<LI><STRONG><A NAME="item_STAGGING">STAGGING</A></STRONG>
+<P>
+In desem Verzeichnis werden Dateien Transportiert, die nicht entgültig auf
+dem Zielsystem verbleiben sollen. Gleichzeitig ist es das <EM>temporary</EM> Verzeichnis für die Insatllationsskripte. Hier können beispielsweise
+Datenbankdumps abgespeichert werden, die in die Datenbank auf dem
+Zielsystem eingefügt werden sollen.Nach erfolgter Paketinstallation werden
+alle Inhalte des Verzeichnisses gelöscht.
+
+<LI><STRONG><A NAME="item_PREINSTALL">PREINSTALL und POSTINSTALL</A></STRONG>
+<P>
+Diese Verzeichnisse beinhalten Skripte, die vor bzw. nach der Installation
+der Dateien aus <EM>ROOT</EM> ins reguläre Dateisystem ausgeführt werden. Bei der Ausführung der Skripte
+ist <EM>STAGGING</EM>
+das current directory. Sie Skripte brauchen sich nicht um ide Beseitigung
+von ihnen dort abgelegter Dateien kümmern. 
+
+</UL>
+<P>
+<HR>
+<H2><A NAME="Lupo_Serverinfrastruktur">Lupo Serverinfrastruktur</A></H2>
+<P>
+Um <STRONG>LIC</STRONG> Updates halbautomatisch oder automatisch durchführen zu können muß ein
+<CODE>http(s)</CODE> Update Server mit einer definierten Struktur bestehen.
+Beispielhaft soll hier der Servername ``update.lic.de:8080'' verwendet
+werden.
+
+<P>
+Alle Pakete haben Namen nach dem Schema <EM>lic-<EM>FF</EM>-<EM>TT</EM>.lupo</EM>
+wobei <EM>FF</EM> der Ausgangsversion (fromversion) und <EM>TT</EM> der Zielversion (toversion) entsprechen. Die Versionsstrings müssen
+numerisch und dürfen zwischen 1-8 Zeichen lang sein.
+
+<P>
+Die einzelnen Pakete sind unter der URL
+<EM>https://update.lic.de:8443/lupo/l/lic-FF-TT.lupo</EM> abzurufen.
+
+<P>
+Unter <EM>http://update.lic.de:8080/lupo/latest</EM> ist eine Datei abzurufen, in der die neuse erhältliche Version abzurufen
+ist. Der Aufbau dieser Datei entspricht der Datei <EM>VERSION</EM>.
+
+<P>
+Diese Datei wird von Clients relativ häufig abgerufen. Es kann signifikant
+Traffic eingespart werden, wenn ein Server verwendet wird, der wenige
+HTTP-Header erzeugt bzw. wenn mit einem CGI-asis/nph Skript gearbeitet
+wird.
+
+<P>
+Während der Check, ob eine neue Version bereitliegt, per http erfolgt, um
+das Protokoll einfach zu halten, erfolgt der Download der *.lupo Files per
+http-over-TLS (https) um sicherzustellen, daß die installierte Software
+auch autentisch ist. Dafür muß der Client eine Kopie des Zertifikats, mit
+dem der Serverkey signiert wurde vorhalten.
+
+<P>
+Um Man-in-the-Middle Attacks auszuschließen, muß das Zertifikat des Servers
+bzw. ein Fingerprint davon in die Lupo Clients eingebaut werden. Das
+bedeutet in der Folge daß, falls der Server-Key abhanden kommt. Lupo nicht
+mehr funktioniert.
+<EM>Der Key muß also hinreichend gegen Verlust gesichert sein.</EM>
+
+
+
+<P>
+<HR>
+<H1><A NAME="Lude_die_Client_Seite_von_Lupo">Lude -  die Client Seite von Lupo</A></H1>
+<P>
+<HR>
+<H2><A NAME="der_eigentliche_Updatevorgang_">der eigentliche Updatevorgang.</A></H2>
+<OL>
+<LI>
+<P>
+<EM>http://update.lic.de:8080/lupo/latest</EM> wird abgefragt. Aus dem Vergleich der dort angegebenen Version mit der
+Systemversion wird ermittelt, wieviele Update Schritte notwendig sind.
+
+<P>
+Die nächsten Schritte werden für jeden Versionsschrit vorgenommen, der
+notwendig ist, um das System auf die aktuelle Version zu updaten. 
+
+<LI>
+<P>
+Das entsprechende Paket wird per https nach <EM>/tmp</EM>
+heruntergeladen. Hierbei wird das Zertifikat des sendenden Servers geprüft.
+Nach erfolgreichem Download wird das Paket nach
+<EM>/var/lupo/downloads</EM> verschoben. So wird sichergestellt, daß in /var/lupo/downloads nur
+komplette Archive vorliegen. Dies geschieht für alle erforderlichen Pakete.
+
+<LI>
+<P>
+Falls in <EM>/var/lupo/downloads</EM> Pakete existieren, wird das Paket mit der kleinsten Versionsnummer nach <EM>/var/lupo/pkg</EM>
+entpackt, soweit sich dort keine Files befinden. Nach dem Entpacken werden
+Versionsnummer usw. geprüft.
+
+<LI>
+<P>
+Es wird ins Verzeichnis <EM>/var/lupo/pkg/STAGGING</EM>
+gewechselt.
+
+<LI>
+<P>
+Jedes Shellskript in <EM>/var/lupo/pkg/PREINSTALL</EM> wird ausgeführt. Direkt nach der Ausführung wird es gelöscht und ein
+<CODE>sync(2)</CODE> ausgeführt. So kann die Gefahr, daß ein Skript nach
+einem crash zweimal ausgeführt wird, minimiert werden. Wenn ein Skript
+einen Reboot durchführen möchte, kann es dies gefahrlos tun, wenn es sich
+erst selber löscht und dann den Reboot auslößt.
+
+<P>
+<PRE>        rm ../PREINSTALL/$0
+        reboot
+</PRE>
+<P>
+Die Ausführungsreihenfolge ergibt sich aus einer ASCII Sortierung der
+Dateinamen. D.h.
+
+<P>
+<PRE>        01-FIrstscript
+        10-Scripta
+        1Skript1
+        Anotherskript
+        
+Ich schlage vor alle Skripte ZZ-Skriptzweck zu nennen. ZZ sind
+zwei Ziffern.
+</PRE>
+<LI>
+<P>
+Die Dateien aus <EM>/var/lupo/pkg/ROOT/<EM>irgendwas</EM>/datei</EM>
+werden nach /<EM>irgendwas</EM>/datei verschoben. Dabei wird zunächst eine eventuell am Zielort vorhandene
+Datei mit dem gleichen Namen von <EM>dateiname</EM> zu <EM>dateiname-</EM> verschoben. Dann wird die neue Datei aus dem Paket an ihren Zielort
+verschoben und dann wird
+<EM>dateiname-</EM> gelöscht, soweit entstanden.
+
+<LI>
+<P>
+Die Shellskripts in <EM>/var/lupo/pkg/POSTINSTALL</EM>
+werden nach der gleichen Methode wie die in PREINSTALL ausgeführt.
+
+<LI>
+<P>
+Die Datei <EM>/var/lupo/pkg/TOVERSION</EM> wird nach
+<EM>/var/lupo/version</EM> verschoben.
+
+<LI>
+<P>
+evtl. Zurück zu Punkt 2.
+
+<LI><STRONG><A NAME="item_0">0</A></STRONG>
+<P>
+<STRONG>Luft</STRONG> wird aufgerufen.
+
+<LI><STRONG><A NAME="item_1">1</A></STRONG>
+<P>
+<STRONG>Lude</STRONG> startet sich selbst erneut, um evtl. neu hinzugekommene Pakete
+nachzuinstallieren.
+
+</OL>
+<P>
+<HR>
+<H2><A NAME="Luft_Ferststellung_ob_Updates">Luft - Ferststellung, ob Updates vorliegen.</A></H2>
+<P>
+<STRONG>Luft</STRONG> stellt fest, ob ein Update vorliegt.
+
+<OL>
+<LI>
+<P>
+Zunächst wird überprüft, ob die Datei
+<EM>/var/lupo/latest</EM> älter als 24 Stunden ist. Wenn ja, wird diese durch ersetzt. <EM>http://update.lic.de:8080/lupo/latest</EM>
+
+
+
+<LI>
+<P>
+wenn die Version in <EM>/var/lupo/latest</EM> größer als die in <EM>/var/lupo/version</EM> ist, wird <EM>/var/lupo/updateneeded</EM>
+angelegt, ansonsten gelöscht.
+
+</OL>
+<P>
+Die GUI kann also die Datei <EM>/var/lupo/updateneeded</EM> auf Existenz prüfen und, wenn diese existiert anzeigen, daß ein Update
+verfügbar ist.
+
+<P>
+<HR>
+<H1><A NAME="Die_installation_des_Servers_">Die installation des Servers.</A></H1>
+<P>
+Zunächst ist sicherzustellen, daß die erforderlichen Tools installiert
+sind: <STRONG>curl</STRONG> mit SSL/TLS Support, <STRONG>bzip2</STRONG>, <STRONG>tar</STRONG>
+und <STRONG>mv</STRONG> sowie für den Server <STRONG>OpenSSL</STRONG> und für das Beispielsetup <STRONG>stunnel</STRONG> und <STRONG>webfs</STRONG>.
+
+<P>
+Danach ist das Paket auszupacken und im Skript
+<EM>install-server</EM> die IP-Adresse für den Server anzupassen.
+
+<P>
+Nun ist <EM>install-server</EM> auszuführen, es legt in <EM>/var/lupod/</EM>
+seine gesammten Dateien ab, erstellt ein Skript zum starten des
+Webserversver und erstellt drei Beispielpakete.
+
+<P>
+In <EM>/var/lupod/lic/</EM> ligt nun ein Paket, daß zur installation auf dem LIC dient. <EM>install-client</EM> muß angepaßt werden und kann dann auf dem Zielsystem aufgerufen werden. Es
+installiert dann die entsprechenden Programme unter /var/lupo.
+
+<P>
+<HR>
+<H1><A NAME="Einbindung_in_das_LIC">Einbindung in das LIC</A></H1>
+<P>
+Folgendes muß zur Integration in das <STRONG>LIC</STRONG> geschehen:
+
+<UL>
+<LI><STRONG><A NAME="item_Feststellung">Feststellung ob Updates vorliegen.</A></STRONG>
+<P>
+Das Programm <EM>/var/lupo/bin/luft</EM> sollte regelmäßig aufgerufen werden. Ich schlage vor es, auf einem
+Standleitungs <STRONG>LIC</STRONG>
+stündlich und auf einem Wählleitungs <STRONG>LIC</STRONG> bei jeder Einwahl aufzurufen. Luft achtet selbsständig darauf, daß es
+Updateserver nicht überlastet, indem es höchstens alle 24 h einen Check
+durchführt.
+
+<LI><STRONG><A NAME="item_Anzeige">Anzeige der Updatemöglichkeit in der GUI</A></STRONG>
+<P>
+Wenn die Datei <EM>/var/lupo/updateneedet</EM> vorhanden ist, sollte dem Benutzer angezeigt werden, daß ein Update möglich
+ist. Die GUI kann in <EM>/var/lupo/version</EM> die eigene Version und in
+<EM>/var/lupo/latest</EM> die N-euste Version, die auf dem Server liegt abfragen.
+
+<LI><STRONG><A NAME="item_Durchf">Durchführung eines Updates</A></STRONG>
+<P>
+Damit ein Update durchgeführt wird, muß <EM>/var/lupo/bin/lude</EM>
+ausgeführt werden. Dieses Programm detacht sich vom Webserver und führt das
+Update durch. Dabei kann in <EM>/var/lupo/status</EM>
+abgrefragt werden, was <STRONG>Lude</STRONG> momentan macht. Diese Datei wird atomisch geupdatet und sollte jederzeit
+lesbar sein. Unter
+<EM>/var/lupo/log</EM> ist ein Log der letzten Aktionen zu sehen. Auch diese Datei wird atomisch
+geupdated. Beide Dateien werden, sobald
+<STRONG>Lude</STRONG> beendet ist, gelöscht. Ich empfehle, daß die GUI eine Seite mit
+automatischem Reload zur Verfügung stellt, die
+<EM>status</EM> oder <EM>log</EM> einbindet um den User über den Fortgang des Updates auf dem Laufenden zu
+halten. Solange <EM>var/lupo/status</EM>
+existiert, sollte es nicht möglich sein, <STRONG>Lude</STRONG> erneut aufzurufen. Lude achtet selbständig darauf, daß es nicht mehrfach
+gestartet wird.
+
+<LI><STRONG><A NAME="item_lude">lude Aufruf beim systemstart</A></STRONG>
+<P>
+Beim Systemstart muß <STRONG>Lude</STRONG> aufgerufen werden, damit es ein eventuell abgebrochenes Update zuende
+ausführen kann. Dazu muß
+<EM>/var/lupo/bin/lude</EM> mit dem Parameter <CODE>--boot</CODE> aufgerufen werden.
+
+<P>
+An diesem Punkt kann <STRONG>Lude</STRONG> nicht sicherstellen, daß es nicht mehrfach ausgeführt wird. Dies sollte
+aber kein Problem sein, solange die Boot-Skripten des Systems nicht
+durcheinander geraten.
+
+</UL>
+<P>
+<HR>
+<H1><A NAME="Paketerstellung_f_r_Eilige">Paketerstellung für Eilige</A></H1>
+<P>
+Bitte möglichst zuerst die Einführung in <A HREF="#Lupo_Pakete">Lupo Pakete</A> durchlesen.
+
+<P>
+Man legt sich zunächst für das neue Lupo Projekt ein neues
+Projetverzeichnis an, daß man z.B. <EM>statistik-tool-update nennt</EM>.
+
+<P>
+<PRE> /var/lupod/bin/lupo-pkg-new statistik-tool-update
+</PRE>
+<P>
+In diesem Verzeichnis kann man dann im Unterverzeichnis <EM>ROOT</EM>
+alle Dateien angeben, die auf dem LIC landen sollen. Wenn eine datei bei
+der Installation in <EM>/etc</EM> landen soll, muß sie im Paketverzeichnis <EM>ROOT/etc</EM> liegen.
+
+<P>
+In die Verzeichnisse <EM>PREINSTALL</EM> und <EM>POSTINSTALL</EM> kann man Shellscripte legen, die zu Beginn oder Zum Ende der Installation
+ausgeführt werden. Diese Skriptre werden im Verzeichnis
+<EM>STAGGING</EM> ausgeführt; dort können auch Dateien, die nur für die Installation
+gebraucht werden, abgelegt werden.
+
+<P>
+In die Datei <EM>NEWS</EM> sollte eine Endkundenkompatible Beschreibung des Paketinhalts in <EM>CHANGES</EM> eine detaillierte Beschreibung dessen, was das Paket macht.
+
+<P>
+Nun gilt es zu Prüfen, ob das Paket korrekt ist.
+
+<P>
+<PRE> /var/lupod/bin/lupo-pkg-check statistik-tool-update
+</PRE>
+<P>
+Wenn dies ohne Fehlermeldungen Geschieht, kann man das Paket erstellen.
+
+<P>
+<PRE> /var/lupod/bin/lupo-pkg-build statistik-tool-update
+</PRE>
+<P>
+Man bekommt den Paketnamen mitgeteilt und kann nun das Paket publizieren.
+
+<P>
+<PRE> /var/lupod/bin/lupo-pkg-publish lic-5-6.lupo
+</PRE>
+<P>
+Das war's.
+
+<P>
+<HR>
+<H1><A NAME="Bugs">Bugs</A></H1>
+<UL>
+<LI><STRONG><A NAME="item_regression">regression tests</A></STRONG>
+<P>
+Es sollte eine automatische Test-Suite geben, die lude und due lupo-pkg-*
+Tools selbständig auf Konformität mit der Spezifikation prüft.
+
+<LI><STRONG><A NAME="item_Pr">Prüfen ob die Prüfung des Ca-Zertifikates erfolgt</A></STRONG>
+<P>
+Wenn das Zertifikat nicht in Ordnung ist, ist das Verhalten undefiniert.
+Das System sollte eine ein definiertes Verhalten bei Problemen mit dem
+Zertifikat an den Tag legen.
+
+<P>
+<CODE>*item</CODE> * Paketerstellung
+
+<P>
+Lupo sollte durch System-Snapshots in der Lage sein halbautomatisch neue
+Pakete zu erstellen.
+
+</DL>
+</BODY>
+
+</HTML>

@@ -1,0 +1,55 @@
+#!/bin/sh
+
+# this creates the files necessary on a lupo client.
+# the Lupo client needs
+# * bzip2
+# * tar 
+# * mv
+# * curl-SSL
+
+# todo: check for these
+
+mkdir /var/lupo
+mkdir /var/lupo/bin
+chmod 700 /var/lupo
+
+install -b -m 755 lude /var/lupo/bin/
+install -b -m 755 luft /var/lupo/bin/
+cp lupo-cert.pem /var/lupo/
+
+echo "1" > /var/lupo/version
+
+cat > /var/lupo/lupo.conf <<EOF
+# hey emacs use your mega mighty -*- perl -*- mode!
+
+# $Id: install-client,v 1.1 2001/02/26 23:48:50 drt Exp $
+# Time-stamp: <01/01/15 15:26:16 drt>
+
+# This is the Configuration of a LUPO client.
+
+# finger address to check for the latest version
+\$lupoversionurl = 'http://lupo.rc23.cx:80/lupo/latest';
+
+# url which contains the directory with the updates
+\$luporepositoryurl = 'https://lupo.rc23.cx:443/lupo/l/';
+
+# the directory where we will play arround
+\$lupotmpdir =\$ENV{'TMP'};
+
+# the directory where we put all our stuff
+\$lupodir = '/var/lupo';
+
+#####
+##### No user servicable parts below
+#####
+
+\$versionretrive_command = "curl --fail --max-time 60 --no-buffer --silent \$lupoversionurl";
+\$pkgretrive_command = "curl --fail --cacert /var/lupod/lupo-cert.pem --max-time 60 --no-buffer --silent -O ";
+
+\$lupoerr = "\$lupodir/stderr";
+EOF
+
+mkdir /var/lupo/pkg
+mkdir /var/lupo/downloads
+
+/var/lupo/bin/luft

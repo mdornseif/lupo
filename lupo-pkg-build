@@ -1,0 +1,61 @@
+#!/usr/bin/perl -w
+# $Id: lupo-pkg-build,v 1.1 2001/02/26 23:48:50 drt Exp $
+# Time-stamp: <01/02/02 16:50:54 drt>
+
+# This file creates Lupo Packages from a Lupo Project Directory
+
+# Urheber D.R. Tzeck im Auftrag der Twisd AG, Bonn http://www.twist.de/
+# Alle Verbreitungs- und Nutzungsrechte vorbehalten.
+
+use strict;
+$| = 1;         # Autoflush to avoid mess with system()s Output
+
+# todo: ./lupo-pkg-test must be called
+
+if($#ARGV != 0)
+  {
+    print "error, syntax: $0 projectdir\n";
+    exit (1);
+  }
+
+my $pkgdir = $ARGV[0];
+
+if(! -d $pkgdir)
+  {
+    print "error, $pkgdir is no directory\n";
+    exit (1);    
+  }
+
+opendir(DIR, $pkgdir) || die "can't opendir $pkgdir: $!";
+my @files = grep { /~$/ } readdir(DIR);
+closedir DIR;
+
+open FILE, "$pkgdir/FROMLEVEL" || die "can't open $pkgdir/FROMLEVEL: $!";
+$_ = <FILE>;
+close FILE;
+(my $fromlevel) = m/^(.*)\n/;
+
+open FILE, "$pkgdir/TOLEVEL" || die "can't open $pkgdir/TOLEVEL: $!";
+$_ = <FILE>;
+close FILE;
+(my $tolevel) = m/^(.*)\n/;
+
+# deleting backupfiles
+foreach (@files)
+  {
+    print "removing $pkgdir/$_\n";
+    unlink($_) || die "can't unlink $pkgdir/$_:";
+  }
+
+chdir($pkgdir) || die "can't chdir to $pkgdir: $!";
+  
+print "creating package\n";
+
+if (system("tar cv . | bzip2 -c9 > ../lic-$fromlevel-$tolevel.lupo") != 0)
+  {
+    die "can't execute tar or bzip2"; 
+  }
+  
+chdir('..') || die "can't chdir to ..: $!";
+
+print "Paket lic-$fromlevel-$tolevel.lupo wurde erstellt\n";

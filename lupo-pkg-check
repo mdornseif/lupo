@@ -1,0 +1,131 @@
+#!/usr/bin/perl -w
+# $Id: lupo-pkg-check,v 1.1 2001/02/26 23:48:50 drt Exp $
+# Time-stamp: <01/01/17 13:20:59 drt>
+
+#
+# This Programm tests  LUPO Project directory for conformance with
+# the LUPO packaging guidelines. All Policy decisions have to
+# be defined and tested here. Further we print some interesting
+# statistics.
+
+# Urheber D.R. Tzeck im Auftrag der Twisd AG, Bonn http://www.twist.de/
+# Alle Verbreitungs- und Nutzungsrechte vorbehalten.
+
+use strict;
+
+# General checks if the user presented us sensible Data
+if($#ARGV != 0)
+  {
+    print "error, syntax: $0 projectdir\n";
+    exit (1);
+  }
+
+my $pkgdir = $ARGV[0];
+
+if(! -d $pkgdir)
+  {
+    print "error, $pkgdir is no directory\n";
+    exit (1);    
+  }
+
+opendir(DIR, $pkgdir) || die "can't opendir $pkgdir: $!";
+my @files = grep { !/^\..?/ } readdir(DIR);
+closedir DIR;
+
+chdir($pkgdir) || die "can't chdir to $pkgdir: $!";
+
+if (!-f 'VERSION')
+  {
+    print STDERR "I can't find the file VERSION in the project directory - this file must exist\n";
+    print STDERR "and contain the Lupo Version.\n";
+    print STDERR "I will create this file for you\n\n";
+    open FILE, ">VERSION" || die "can't create VERSION:";
+    print FILE "1\n";
+    close FILE;    
+  }
+
+if (!-f 'FROMLEVEL')
+  {
+    print STDERR "I can't find the file FROMLEVEL in the project directory - this file must\n";
+    print STDERR "exist and contain the LIC Version to which this package should be applied.\n";
+    exit(2);
+  }
+
+if (!-f 'TOLEVEL')
+  {
+    print STDERR "I can't find the file TOLEVEL in the project directory - this file must exist\n";
+    print STDERR "and contain the LIC Version which will be current Version after the update.\n";
+    exit(2);
+    
+  }
+
+if (!-f 'NEWS')
+  {
+    print STDERR "I can't find the file NEWS in the project directory - this file must exist\n";
+    print STDERR "and contain the sales Blurb we will show to the user if he asks what will be new.\n";
+    print STDERR "I will create this file for you, please check it's contents!\n\n";
+    open FILE, ">NEWS" || die "can't create NEWS:";
+    print FILE "Keine für den Endnutzer sichtbaren Änderungen\n";
+    close FILE;    
+  }
+
+if (!-f 'CHANGES')
+  {
+    print STDERR "I can't find the file CHANGES in the project directory - this file must exist\n";
+    print STDERR "and contain the listing of low level changes.\n";
+    print STDERR "I will create this file for you, please check it's contents!\n\n";
+    open FILE, ">CHANGES" || die "can't create CHANGES:";
+    print FILE "Nothing has changed - not really\n";
+    close FILE;
+  }
+
+if (!-d 'PREINSTALL')
+  {
+    print STDERR "There is no PREINSTALL directory for preinstall scripts. Create one.\n";
+    exit(2);
+  }
+
+if (!-d 'POSTINSTALL')
+  {
+    print STDERR "There is no POSTINSTALL directory for postinstall scripts. Create one.\n";
+    exit(2);
+  }
+
+if (!-d 'ROOT')
+  {
+    print STDERR "There is no ROOT directory to transport ready-made files. Create one.\n";
+    exit(2);
+  }
+
+if (!-d 'STAGGING')
+  {
+    print STDERR "There is no STAGGING tirectory to carry temporary files. Create one.\n";
+    exit(2);
+  }
+
+open FILE, 'FROMLEVEL' || die "can't open FROMLEVEL: $!";
+$_ = <FILE>;
+close FILE;
+(my $fromlevel) = m/^(.*)\n/;
+
+open FILE, 'TOLEVEL' || die "can't open TOLEVEL: $!";
+$_ = <FILE>;
+close FILE;
+(my $tolevel) = m/^(.*)\n/;
+
+if ($fromlevel >= $tolevel)
+  {
+    print "This package claims to upgrade $fromlevel to $tolevel. I consider this\n";
+    print "a downgrade since in my opinion $fromlevel is higher (or equal)\n";
+    print "then $tolevel.\n";
+    exit(3);
+  }
+
+# todo: check scripts
+
+# print various information
+
+print "From Level: $fromlevel\n";
+print "To Level:   $tolevel\n";
+
+# todo: files, size, scripts

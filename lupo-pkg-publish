@@ -1,0 +1,29 @@
+#!/bin/sh
+# $Id: lupo-pkg-publish,v 1.1 2001/02/26 23:48:50 drt Exp $
+# Time-stamp: <01/02/02 16:19:28 drt>
+
+# This file publishes a package on the server
+
+# Urheber D.R. Tzeck im Auftrag der Twisd AG, Bonn http://www.twist.de/
+# Alle Verbreitungs- und Nutzungsrechte vorbehalten.
+
+# lupo-pkg-new PACKAGENAME
+
+
+if test "xx$1" = 'xx'; then
+    echo "Usage: $0 PAKETNAME"
+    exit
+fi
+if test ! -f $1; then
+    echo "$1 ist keine Datei"
+    exit
+fi
+if test `echo "$1" | grep -c -E "^lic-[[:digit:]]+-[[:digit:]]+\.lupo$"` = 0; then
+    echo "$1 scheint kein gültiger Paketname zu sein"
+    exit
+fi
+			    		    
+mv $1 /var/lupod/server/lupo/l/ \  
+&& (echo "`cat /var/lupod/server/lupo/latest`+1" | bc > /var/lupod/server/lupo/latest.tmp) \
+&& mv /var/lupod/server/lupo/latest.tmp  /var/lupod/server/lupo/latest
+
